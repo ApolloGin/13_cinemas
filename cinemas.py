@@ -34,21 +34,38 @@ def fetch_movie_info(movie_title):
         headers=headers
     )
     html_doc = BeautifulSoup(response.content, 'html.parser')
-    tag = html_doc.find('div', class_='most_wanted')
-    indicators = ['0', '0']
-    if tag.div.div:
-        title = tag.div.div['title']
-        indicators = re.sub(r'[^0-9\.(]','', title).split('(')
-        if not indicators[0]:
-            indicators[0] = tag.div.div.string
-    rating = float(indicators[0])
-    votes_count = int(indicators[1])
+    rating, votes_count = get_data_from_html_page(html_doc)
 
     return rating, votes_count
 
 
+def get_data_from_html_page(html_doc):
+    tag = html_doc.find('div', class_='most_wanted')
+    rating = '0'
+    votes_count = '0'
+    if tag.div.div:
+        str_with_data = tag.div.div['title']
+        str_with_data = re.sub(
+            r'[^0-9\.(]',
+            '',
+            str_with_data
+        )
+        rating, votes_count = str_with_data.split('(')
+
+        if not rating:
+            rating = tag.div.div.string
+
+    return float(rating), int(votes_count)
+
+
+
 def output_movies_to_console(movies, count):
-    for movie in movies.sort(key=operator.itemgetter(2, 3))[:count]:
+    sorted_movies = sorted(
+        movies,
+        key=operator.itemgetter(1, 2),
+        reverse=True
+    )
+    for movie in sorted_movies[:count]:
         print(movie[0])
         print(' - rating: {0}'.format(movie[1]))
         print(' - votes count: {0}'.format(movie[2]))
@@ -59,5 +76,6 @@ if __name__ == '__main__':
     movies = []
     for movie_title, cinema_count in parse_afisha_list(fetch_afisha_page()):
         rating, votes_count = fetch_movie_info(movie_title)
+        print([movie_title, rating, votes_count, cinema_count])
         movies.append([movie_title, rating, votes_count, cinema_count])
     output_movies_to_console(movies, 10)
